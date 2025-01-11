@@ -6,6 +6,11 @@
 
 #include "GL/glew.h"
 
+#include "DirectionalLight.hpp"
+#include "PointLight.hpp"
+#include "SpotLight.hpp"
+#include "CommonValues.hpp"
+
 class Shader {
 public:
 	Shader();
@@ -17,20 +22,48 @@ public:
 	GLuint getProjectionLoc() const { return uniformProjection; };
 	GLuint getModelLoc() const { return uniformModel; };
 	GLuint getViewLoc() const { return uniformView; };
-	GLuint getAmbientILoc() const { return uniformAmbientI; };
-	GLuint getAmbientColourLoc() const { return uniformAmbientColour; };
-	GLuint getDiffuseILoc() const { return uniformDiffuseI; };
-	GLuint getDirectionLoc() const { return uniformDirection; };
 	GLuint getEyePositionLoc() const { return uniformEyePosition; };
 	GLuint getSpecularILoc() const { return uniformSpecularI; };
 	GLuint getShininessLoc() const { return uniformShininess; };
+
+	void setDirectionalLight(DirectionalLight* dLight);
+	void setPointLights(PointLight* lights, unsigned int lightCount);
+	void setSpotLights(SpotLight* lights, unsigned int spotCount);
+
 private:
+	int pointLightCount{ 0 };
+	int spotLightCount{ 0 };
 	GLuint shaderID{0};
 	GLuint uniformProjection{ 0 }, uniformModel{ 0 }, uniformView{ 0 };
-	GLuint uniformAmbientI{ 0 }, uniformAmbientColour{ 0 };
-	GLuint uniformDiffuseI{ 0 }, uniformDirection{ 0 };
 	GLuint uniformEyePosition{ 0 };
 	GLuint uniformSpecularI{ 0 }, uniformShininess{ 0 };
+	GLuint uniformPointLightCount{ 0 };
+	GLuint uniformSpotLightCount{ 0 };
+	struct {
+		GLuint colour;
+		GLuint ambientIntensity;
+		GLuint diffuseIntensity;
+		
+		GLuint direction;
+	} uniformDirectionalLight;
+	struct {
+		GLuint colour;
+		GLuint ambientIntensity;
+		GLuint diffuseIntensity;
+
+		GLuint position;
+		GLuint constant, linear, exponent;
+	} uniformPointLights[MAX_POINT_LIGHTS];
+	struct {
+		GLuint colour;
+		GLuint ambientIntensity;
+		GLuint diffuseIntensity;
+
+		GLuint position;
+		GLuint constant, linear, exponent;
+		GLuint direction, edge;
+	} uniformSpotLights[MAX_SPOT_LIGHTS];
+
 	std::string readFile(const char* path);
 	void compileShader(const char* vertexCode, const char* fragmentCode);
 	void addShader(GLuint theProgram, const char* shaderCode, GLenum shaderType);
