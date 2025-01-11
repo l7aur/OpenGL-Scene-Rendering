@@ -1,7 +1,6 @@
 #include "Shader.hpp"
 
 Shader::Shader()
-	: shaderID(0), uniformModel(0), uniformProjection(0)
 {
 }
 
@@ -83,6 +82,13 @@ void Shader::compileShader(const char* vertexCode, const char* fragmentCode)
 	uniformModel = glGetUniformLocation(shaderID, "model");
 	uniformProjection = glGetUniformLocation(shaderID, "projection");
 	uniformView = glGetUniformLocation(shaderID, "view");
+	uniformAmbientI = glGetUniformLocation(shaderID, "directionalLight.ambientIntensity");
+	uniformAmbientColour = glGetUniformLocation(shaderID, "directionalLight.colour");
+	uniformDiffuseI = glGetUniformLocation(shaderID, "directionalLight.diffuseIntensity");
+	uniformDirection = glGetUniformLocation(shaderID, "directionalLight.direction");
+	uniformEyePosition = glGetUniformLocation(shaderID, "eyePosition");
+	uniformSpecularI = glGetUniformLocation(shaderID, "material.specularIntensity");
+	uniformShininess = glGetUniformLocation(shaderID, "material.shininess");
 }
 
 void Shader::addShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)

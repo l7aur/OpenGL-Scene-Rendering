@@ -17,10 +17,20 @@ public:
 	GLuint getProjectionLoc() const { return uniformProjection; };
 	GLuint getModelLoc() const { return uniformModel; };
 	GLuint getViewLoc() const { return uniformView; };
+	GLuint getAmbientILoc() const { return uniformAmbientI; };
+	GLuint getAmbientColourLoc() const { return uniformAmbientColour; };
+	GLuint getDiffuseILoc() const { return uniformDiffuseI; };
+	GLuint getDirectionLoc() const { return uniformDirection; };
+	GLuint getEyePositionLoc() const { return uniformEyePosition; };
+	GLuint getSpecularILoc() const { return uniformSpecularI; };
+	GLuint getShininessLoc() const { return uniformShininess; };
 private:
-	GLuint shaderID;
-	GLuint uniformProjection, uniformModel, uniformView;
-
+	GLuint shaderID{0};
+	GLuint uniformProjection{ 0 }, uniformModel{ 0 }, uniformView{ 0 };
+	GLuint uniformAmbientI{ 0 }, uniformAmbientColour{ 0 };
+	GLuint uniformDiffuseI{ 0 }, uniformDirection{ 0 };
+	GLuint uniformEyePosition{ 0 };
+	GLuint uniformSpecularI{ 0 }, uniformShininess{ 0 };
 	std::string readFile(const char* path);
 	void compileShader(const char* vertexCode, const char* fragmentCode);
 	void addShader(GLuint theProgram, const char* shaderCode, GLenum shaderType);
