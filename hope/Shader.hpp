@@ -4,12 +4,15 @@
 #include <string>
 #include <fstream>
 
-#include "GL/glew.h"
+#include <GL/glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
+#include "CommonValues.hpp"
 #include "DirectionalLight.hpp"
 #include "PointLight.hpp"
 #include "SpotLight.hpp"
-#include "CommonValues.hpp"
 
 class Shader {
 public:
@@ -18,22 +21,25 @@ public:
 	void useShader();
 	void clearShader();
 	void createFromString(const char *vertexCode, const char* fragmentCode);
-	void createFromFile(const char *vertexLocation, const char* fragmentLocation);
+	void createFromFiles(const char *vertexLocation, const char* fragmentLocation);
 	GLuint getProjectionLoc() const { return uniformProjection; };
-	GLuint getModelLoc() const { return uniformModel; };
+	GLuint getModelLoc() { return uniformModel; };
 	GLuint getViewLoc() const { return uniformView; };
 	GLuint getEyePositionLoc() const { return uniformEyePosition; };
 	GLuint getSpecularILoc() const { return uniformSpecularI; };
 	GLuint getShininessLoc() const { return uniformShininess; };
+	GLuint getShaderID() const { return shaderID; };
 
 	void setDirectionalLight(DirectionalLight* dLight);
 	void setPointLights(PointLight* lights, unsigned int lightCount);
 	void setSpotLights(SpotLight* lights, unsigned int spotCount);
-
+	void setTexture(GLuint textureUnit);
+	void setDirectionalShadowMap(GLuint textureUnit);
+	void setDirectionalLightTransform(glm::mat4* lightT);
 private:
 	int pointLightCount{ 0 };
 	int spotLightCount{ 0 };
-	GLuint shaderID{0};
+	GLuint shaderID{ 0 };
 	GLuint uniformProjection{ 0 }, uniformModel{ 0 }, uniformView{ 0 };
 	GLuint uniformEyePosition{ 0 };
 	GLuint uniformSpecularI{ 0 }, uniformShininess{ 0 };
@@ -43,7 +49,7 @@ private:
 		GLuint colour;
 		GLuint ambientIntensity;
 		GLuint diffuseIntensity;
-		
+
 		GLuint direction;
 	} uniformDirectionalLight;
 	struct {
@@ -63,6 +69,8 @@ private:
 		GLuint constant, linear, exponent;
 		GLuint direction, edge;
 	} uniformSpotLights[MAX_SPOT_LIGHTS];
+	GLuint uniformDirectionalLightTransform{ 0 }, uniformDirectionalShadowM{ 0 };
+	GLuint uniformTexture{ 0 };
 
 	std::string readFile(const char* path);
 	void compileShader(const char* vertexCode, const char* fragmentCode);

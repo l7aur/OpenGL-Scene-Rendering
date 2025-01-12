@@ -11,7 +11,8 @@ PointLight::PointLight(
 	GLfloat posX, GLfloat posY, GLfloat posZ, 
 	GLfloat con, GLfloat lin, GLfloat exp)
 	:
-	Light(red, green, blue, ambientI, diffuseI), position(posX, posY, posZ), constant(con), linear(lin), exponent(exp)
+	Light(1024, 1024, red, green, blue, ambientI, diffuseI), 
+	position(posX, posY, posZ), constant(con), linear(lin), exponent(exp)
 {
 }
 
