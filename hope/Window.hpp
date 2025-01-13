@@ -17,6 +17,7 @@ public:
 	const bool* getKeys() const { return keys; };
 	GLfloat getXChange() { GLfloat c = xChange; xChange = 0.0f; return c; };
 	GLfloat getYChange() { GLfloat c = yChange; yChange = 0.0f; return c; };
+	void unsetKey(int key) { keys[key] = false; };
 private:
 	GLFWwindow* mainWindow{ nullptr };
 	GLint bufferWidth{ 0 }, bufferHeight{ 0 };

@@ -15,7 +15,12 @@ Light::Light(
 
 void Light::useLight(GLuint ambientILocation, GLuint ambientColourLocation, GLuint diffuseILocation)
 {
-	glUniform3f(ambientColourLocation, colour.r, colour.g, colour.b);
-	glUniform1f(ambientILocation, ambientIntensity);
-	glUniform1f(diffuseILocation, diffuseIntensity);
+	if (isOn) {
+		glUniform3f(ambientColourLocation, colour.r, colour.g, colour.b);
+		glUniform1f(ambientILocation, ambientIntensity);
+		glUniform1f(diffuseILocation, diffuseIntensity);
+		return;
+	}
+	glUniform1f(ambientILocation, 0.0f);
+	glUniform1f(diffuseILocation, 0.0f);
 }

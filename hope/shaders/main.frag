@@ -11,6 +11,14 @@ out vec4 colour;
 const int MAX_POINT_LIGHTS = 3;
 const int MAX_SPOT_LIGHTS = 3;
 
+vec3 sampleOffsetDirections[20] = vec3[] (
+	vec3(1, 1, 1), vec3(1, -1, 1), vec3(-1, -1, 1), vec3(-1, 1, 1),
+	vec3(1, 1, -1), vec3(1, -1, -1), vec3(-1, -1, -1), vec3(-1, 1, -1),
+	vec3(1, 1, 0), vec3(1, -1, 0), vec3(-1, -1, 0), vec3(-1, 1, 0),
+	vec3(1, 0, 1), vec3(-1, 0, 1), vec3(1, 0, -1), vec3(-1, 0, -1),
+	vec3(0, 1, 1), vec3(0, -1, 1), vec3(0, -1, 1), vec3(0, 1, -1)
+);
+
 struct Light {
 	vec3 colour;
 	float ambientIntensity;
@@ -62,14 +70,38 @@ uniform vec3 eyePosition;
 float computeOmniShadowFactor(PointLight light, int shadowIndex) {
 	vec3 fragToLight = fragPos - light.position;
 
-	float closest = texture(omniShadowMaps[shadowIndex].shadowMap, fragToLight).r;
-	closest *= omniShadowMaps[shadowIndex].farPlane;
+	float currentDepth = length(fragToLight);
+	
+	float shadow = 0.0f;
+    float bias = 0.05f;
+//	float samples = 4.0f;
+//	float offset = 0.1f;
+//
+//	for(float x = -offset; x < offset; x += offset / (samples * 0.5f)) 
+//		for(float y = -offset; y < offset; y += offset / (samples * 0.5f)) 
+//			for(float z = -offset; z < offset; z += offset / (samples * 0.5f)) {
+//				float closestDepth = texture(omniShadowMaps[shadowIndex].shadowMap, fragToLight + vec3(x, y, z)).r;
+//				closestDepth *= omniShadowMaps[shadowIndex].farPlane;
+//				if(currentDepth - bias > closestDepth)
+//					shadow += 1.0f;
+//			}
+//
+//	shadow /= (samples * samples * samples);
+//	return shadow;
+	int samples = 20;
 
-	float current = length(fragToLight);
+	float viewDistance = length(eyePosition - fragPos);
+	float diskRadius = (1.0f + (viewDistance / omniShadowMaps[shadowIndex].farPlane)) / 25.0f;
+	
+	
+	for(int i = 0; i < samples; i++) {
+		float closestDepth = texture(omniShadowMaps[shadowIndex].shadowMap, fragToLight + sampleOffsetDirections[i] * diskRadius).r;
+		closestDepth *= omniShadowMaps[shadowIndex].farPlane;
+		if(currentDepth - bias > closestDepth)
+			shadow += 1.0f;
+	}
 
-	float bias = 0.05f;
-	float shadow = (current - bias > closest) ? 1.0f : 0.0f;
-
+	shadow /= float(samples);
 	return shadow;
 }
 

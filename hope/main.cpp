@@ -328,7 +328,6 @@ int main() {
 		-100.0f, -1.0f, 0.0f,
 		1.0f, 0.0f, 0.0f,
 		20.0f);
-	spotLightCount = 0;
 	shiny = Material(1.0f, 32.0f);
 	dull = Material(0.3f, 4.0f);
 
@@ -346,6 +345,11 @@ int main() {
 
 		camera.keyControl(mainWindow.getKeys(), deltaTime);
 		camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());		
+
+		if (mainWindow.getKeys()[GLFW_KEY_L]) {
+			spotLights[0].toggle();
+			mainWindow.unsetKey(GLFW_KEY_L);
+		}
 
 		directionalShadowMapPass(&mainLight);
 		for (size_t i = 0; i < pointLightCount; i++)

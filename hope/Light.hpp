@@ -14,9 +14,12 @@ public:
 		GLfloat red, GLfloat green, GLfloat blue,
 		GLfloat ambientI, GLfloat diffuseI);
 	void useLight(GLuint ambientILocation, GLuint ambientColourLocation, GLuint diffuseILocation);
+	void toggle() { isOn = !isOn; };
 	ShadowMap* getShadowMap() const { return shadowM; };
 	~Light() {};
 protected:
+	bool isOn{ true };
+
 	glm::vec3 colour{ 1.0f, 1.0f, 1.0f };
 	GLfloat ambientIntensity{ 1.0f };
 
