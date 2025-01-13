@@ -26,6 +26,8 @@
     <ClCompile Include="Material.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Model.cpp" />
+    <ClCompile Include="OmnidirectionalShadowMap.cpp" />
+    <ClCompile Include="OmnidirectionalShadowMap.hpp" />
     <ClCompile Include="PointLight.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
@@ -54,6 +56,9 @@
     <None Include="shaders\directionalShadow.vert" />
     <None Include="shaders\main.frag" />
     <None Include="shaders\main.vert" />
+    <None Include="shaders\omnishadowMap.frag" />
+    <None Include="shaders\omnishadowMap.geom" />
+    <None Include="shaders\omnishadowMap.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

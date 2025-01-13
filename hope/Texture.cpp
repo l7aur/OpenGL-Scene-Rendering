@@ -59,7 +59,7 @@ bool Texture::loadTextureA()
 
 void Texture::useTexture()
 {
-	glActiveTexture(GL_TEXTURE0);
+	glActiveTexture(GL_TEXTURE1); // use it to remove conflict in shader because of clashing textures at 0
 	glBindTexture(GL_TEXTURE_2D, textureID);
 }
 

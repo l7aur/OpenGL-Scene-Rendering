@@ -2,29 +2,20 @@
 
 Shader::Shader() {
 	for (size_t i = 0; i < MAX_POINT_LIGHTS; i++) {
-		uniformPointLights[i].ambientIntensity = 0;
-		uniformPointLights[i].colour = 0;
-		uniformPointLights[i].constant = 0;
-		uniformPointLights[i].diffuseIntensity = 0;
-		uniformPointLights[i].exponent = 0;
-		uniformPointLights[i].linear = 0;
-		uniformPointLights[i].position = 0;
+		uniformPointLights[i].ambientIntensity = uniformPointLights[i].colour = 0;
+		uniformPointLights[i].constant = uniformPointLights[i].diffuseIntensity = 0;
+		uniformPointLights[i].exponent = uniformPointLights[i].linear = uniformPointLights[i].position = 0;
 	}
 	for (size_t i = 0; i < MAX_SPOT_LIGHTS; i++) {
-		uniformSpotLights[i].ambientIntensity = 0;
-		uniformSpotLights[i].colour = 0;
-		uniformSpotLights[i].constant = 0;
-		uniformSpotLights[i].diffuseIntensity = 0;
-		uniformSpotLights[i].direction = 0;
-		uniformSpotLights[i].edge = 0;
-		uniformSpotLights[i].exponent = 0;
-		uniformSpotLights[i].linear = 0;
-		uniformSpotLights[i].position = 0;
+		uniformSpotLights[i].ambientIntensity = uniformSpotLights[i].colour = 0;
+		uniformSpotLights[i].constant = uniformSpotLights[i].diffuseIntensity = 0;
+		uniformSpotLights[i].direction = uniformSpotLights[i].edge = 0;
+		uniformSpotLights[i].exponent = uniformSpotLights[i].linear = uniformSpotLights[i].position = 0;
 	}
-	uniformDirectionalLight.ambientIntensity = 0;
-	uniformDirectionalLight.colour = 0;
-	uniformDirectionalLight.diffuseIntensity = 0;
-	uniformDirectionalLight.direction = 0;
+	uniformDirectionalLight.ambientIntensity = uniformDirectionalLight.colour = 0;
+	uniformDirectionalLight.diffuseIntensity = uniformDirectionalLight.direction = 0;
+	for (size_t i = 0; i < MAX_POINT_LIGHTS + MAX_SPOT_LIGHTS; i++)
+		uniformOmniShadowM[i].shadowMap = uniformOmniShadowM[i].farPlane = 0;
 }
 
 void Shader::useShader()
@@ -46,6 +37,11 @@ void Shader::createFromString(const char* vertexCode, const char* fragmentCode)
 	compileShader(vertexCode, fragmentCode);
 }
 
+void Shader::createFromString(const char* vertexCode, const char* geometryCode, const char* fragmentCode)
+{
+	compileShader(vertexCode, geometryCode, fragmentCode);
+}
+
 void Shader::createFromFiles(const char* vertexLocation, const char* fragmentLocation)
 {
 	std::string vertexString = readFile(vertexLocation);
@@ -57,6 +53,32 @@ void Shader::createFromFiles(const char* vertexLocation, const char* fragmentLoc
 	compileShader(vertexCode, fragmentCode);
 }
 
+void Shader::createFromFiles(const char* vertexLocation, const char* geometryLocation, const char* fragmentLocation)
+{
+	std::string vertexString = readFile(vertexLocation);
+	std::string geometryString = readFile(geometryLocation);
+	std::string fragmentString = readFile(fragmentLocation);
+
+	const char* vertexCode = vertexString.c_str();
+	const char* geometryCode = geometryString.c_str();
+	const char* fragmentCode = fragmentString.c_str();
+
+	compileShader(vertexCode, geometryCode, fragmentCode);
+}
+
+void Shader::validate()
+{
+	GLint result = 0;
+	GLchar eLog[1024]{ '\0' };
+	glValidateProgram(shaderID);
+	glGetProgramiv(shaderID, GL_VALIDATE_STATUS, &result);
+	if (!result) {
+		glGetProgramInfoLog(shaderID, sizeof(eLog), NULL, eLog);
+		printf("Error validating the shader program: %s!\n", eLog);
+		return;
+	}
+}
+
 void Shader::setDirectionalLight(DirectionalLight* dLight)
 {
 	dLight->useLight(
@@ -64,7 +86,7 @@ void Shader::setDirectionalLight(DirectionalLight* dLight)
 		uniformDirectionalLight.diffuseIntensity, uniformDirectionalLight.direction);
 }
 
-void Shader::setPointLights(PointLight* lights, unsigned int lightCount)
+void Shader::setPointLights(PointLight* lights, unsigned int lightCount, unsigned int textureUnit, unsigned int offset)
 {
 	if (lightCount > MAX_POINT_LIGHTS)
 		lightCount = MAX_POINT_LIGHTS;
@@ -75,10 +97,16 @@ void Shader::setPointLights(PointLight* lights, unsigned int lightCount)
 			uniformPointLights[i].ambientIntensity, uniformPointLights[i].colour, uniformPointLights[i].diffuseIntensity, 
 			uniformPointLights[i].position,
 			uniformPointLights[i].constant, uniformPointLights[i].linear, uniformPointLights[i].exponent);
+
+		lights[i].getShadowMap()->read(GL_TEXTURE0 + textureUnit + i);
+		glUniform1i(uniformOmniShadowM[i + offset].shadowMap, textureUnit + i);
+
+		float f = lights[i].getFarPlane();
+		glUniform1f(uniformOmniShadowM[i + offset].farPlane, f);
 	}
 }
 
-void Shader::setSpotLights(SpotLight* lights, unsigned int spotCount)
+void Shader::setSpotLights(SpotLight* lights, unsigned int spotCount, unsigned int textureUnit, unsigned int offset)
 {
 	if (spotCount > MAX_SPOT_LIGHTS)
 		spotCount = MAX_SPOT_LIGHTS;
@@ -90,14 +118,20 @@ void Shader::setSpotLights(SpotLight* lights, unsigned int spotCount)
 			uniformSpotLights[i].position, uniformSpotLights[i].direction,
 			uniformSpotLights[i].constant, uniformSpotLights[i].linear, uniformSpotLights[i].exponent,
 			uniformSpotLights[i].edge);
+
+		lights[i].getShadowMap()->read(GL_TEXTURE0 + textureUnit + i);
+		glUniform1i(uniformOmniShadowM[i + offset].shadowMap, textureUnit + i);
+
+		float f = lights[i].getFarPlane();
+		glUniform1f(uniformOmniShadowM[i + offset].farPlane, f);
 	}
 }
 
-void Shader::setTexture(GLuint textureUnit) { glUniform1i(uniformTexture, textureUnit); }
-
-void Shader::setDirectionalShadowMap(GLuint textureUnit) { glUniform1i(uniformDirectionalShadowM, textureUnit); }
-
-void Shader::setDirectionalLightTransform(glm::mat4* lightT) { glUniformMatrix4fv(uniformDirectionalLightTransform, 1, GL_FALSE, glm::value_ptr(*lightT)); }
+void Shader::setOmniLightMatrices(std::vector<glm::mat4> lightMatrices)
+{
+	for (size_t i = 0; i < 6; i++)
+		glUniformMatrix4fv(uniformLightMatrices[i], 1, GL_FALSE, glm::value_ptr(lightMatrices.at(i)));
+}
 
 std::string Shader::readFile(const char* path)
 {
@@ -125,7 +159,26 @@ void Shader::compileShader(const char* vertexCode, const char* fragmentCode)
 	}
 	addShader(shaderID, vertexCode, GL_VERTEX_SHADER);
 	addShader(shaderID, fragmentCode, GL_FRAGMENT_SHADER);
+	
+	compileProgram();
+}
 
+void Shader::compileShader(const char* vertexCode, const char* geometryCode, const char* fragmentCode)
+{
+	shaderID = glCreateProgram();
+	if (!shaderID) {
+		printf("Error creating shader program!\n");
+		return;
+	}
+	addShader(shaderID, vertexCode, GL_VERTEX_SHADER);
+	addShader(shaderID, geometryCode, GL_GEOMETRY_SHADER);
+	addShader(shaderID, fragmentCode, GL_FRAGMENT_SHADER);
+
+	compileProgram();
+}
+
+void Shader::compileProgram()
+{
 	GLint result = 0;
 	GLchar eLog[1024]{ '\0' };
 
@@ -134,13 +187,6 @@ void Shader::compileShader(const char* vertexCode, const char* fragmentCode)
 	if (!result) {
 		glGetProgramInfoLog(shaderID, sizeof(eLog), NULL, eLog);
 		printf("Error linking the shader program: %s!\n", eLog);
-		return;
-	}
-	glValidateProgram(shaderID);
-	glGetProgramiv(shaderID, GL_VALIDATE_STATUS, &result);
-	if (!result) {
-		glGetProgramInfoLog(shaderID, sizeof(eLog), NULL, eLog);
-		printf("Error validating the shader program: %s!\n", eLog);
 		return;
 	}
 
@@ -215,6 +261,24 @@ void Shader::compileShader(const char* vertexCode, const char* fragmentCode)
 	uniformTexture = glGetUniformLocation(shaderID, "theTexture");
 	uniformDirectionalLightTransform = glGetUniformLocation(shaderID, "directionalLightTransform");
 	uniformDirectionalShadowM = glGetUniformLocation(shaderID, "directionalShadowMap");
+
+	uniformOmniLightPos = glGetUniformLocation(shaderID, "lightPos");
+	uniformFarPlane = glGetUniformLocation(shaderID, "farPlane");
+
+	for (size_t i = 0; i < 6; i++) {
+		char buffer[100] = { '\0' };
+		snprintf(buffer, sizeof(buffer), "lightMatrices[%zu]", i);
+		uniformLightMatrices[i] = glGetUniformLocation(shaderID, buffer);
+	}
+
+	for (size_t i = 0; i < MAX_POINT_LIGHTS + MAX_SPOT_LIGHTS; i++) {
+		char buffer[100]{ '\0' };
+		snprintf(buffer, sizeof(buffer), "omniShadowMaps[%zu].shadowMap", i);
+		uniformOmniShadowM[i].shadowMap = glGetUniformLocation(shaderID, buffer);
+
+		snprintf(buffer, sizeof(buffer), "omniShadowMaps[%zu].farPlane", i);
+		uniformOmniShadowM[i].farPlane = glGetUniformLocation(shaderID, buffer);
+	}
 }
 
 void Shader::addShader(GLuint theProgram, const char* shaderCode, GLenum shaderType)
