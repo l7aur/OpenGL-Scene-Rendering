@@ -3,11 +3,12 @@
 #include <stdio.h>
 #include <string>
 #include <fstream>
+#include <iostream>
 
 #include <GL/glew.h>
 #include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "CommonValues.hpp"
 #include "DirectionalLight.hpp"
@@ -20,10 +21,10 @@ public:
 	~Shader() { clearShader(); };
 	void useShader();
 	void clearShader();
-	void createFromString(const char *vertexCode, const char* fragmentCode);
-	void createFromFiles(const char *vertexLocation, const char* fragmentLocation);
+	void createFromString(const char* vertexCode, const char* fragmentCode);
+	void createFromFiles(const char* vertexLocation, const char* fragmentLocation);
 	GLuint getProjectionLoc() const { return uniformProjection; };
-	GLuint getModelLoc() { return uniformModel; };
+	GLuint getModelLoc() const { return uniformModel; };
 	GLuint getViewLoc() const { return uniformView; };
 	GLuint getEyePositionLoc() const { return uniformEyePosition; };
 	GLuint getSpecularILoc() const { return uniformSpecularI; };

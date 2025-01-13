@@ -13,7 +13,7 @@ DirectionalLight::DirectionalLight(
 	GLfloat dirX, GLfloat dirY, GLfloat dirZ)
 	:
 	Light(shadowWidth, shadowHeight, red, green, blue, ambientI, diffuseI), 
-	direction(glm::normalize(glm::vec3{ dirX, dirY, dirZ }))
+	direction(glm::vec3{ dirX, dirY, dirZ })
 {
 	lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 100.0f);
 }

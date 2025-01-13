@@ -24,7 +24,6 @@
 #include "Material.hpp"
 #include "Model.hpp"
 
-
 Window mainWindow;
 Camera camera;
 DirectionalLight mainLight;
@@ -123,9 +122,6 @@ static void createObjects() {
 	Mesh* obj3 = new Mesh();
 	obj3->createMesh(floorVertices, floorIndices, 32, 6);
 	meshList.push_back(obj3);
-	Mesh* quad = new Mesh();
-	meshList.push_back(quad);
-	quad->createMesh(quadVertices, quadIndices, 32, 6);
 }
 
 static void createShaders() {
@@ -142,6 +138,8 @@ static void cleanup() {
 	for (auto& i : shaderList)
 		delete i;
 }
+
+float blackhawkAngle = 0.0f;
 
 static void renderScene() {
 	glm::mat4 model(1.0f);
@@ -160,6 +158,7 @@ static void renderScene() {
 
 	model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	dirtTex.useTexture();
 	shiny.useMaterial(uniformSpecularI, uniformShininess);
@@ -172,18 +171,21 @@ static void renderScene() {
 	shiny.useMaterial(uniformSpecularI, uniformShininess);
 	xWing.renderModel();
 
+	blackhawkAngle += 0.1f;
+	if (blackhawkAngle > 360.0f)
+	{
+		blackhawkAngle = 0.1f;
+	}
+
 	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-3.0f, 2.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3{ 1.0f, 0.0f, 0.0f });
+	model = glm::rotate(model, glm::radians(-blackhawkAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(-8.0f, 2.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	shiny.useMaterial(uniformSpecularI, uniformShininess);
 	blackHawk.renderModel();
-
-	model = glm::mat4(1.0f);
-	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	dull.useMaterial(uniformSpecularI, uniformShininess);
-	meshList.at(3)->renderMesh();
 }
 
 void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) {
@@ -252,10 +254,8 @@ int main() {
 	plainTex = Texture("models/textures/plain.png");
 	plainTex.loadTextureA();
 
-
-
 	mainLight = DirectionalLight(
-		1024, 1024,
+		2048, 2048,
 		1.0f, 1.0f, 1.0f,
 		0.4f, 0.3f,
 		0.0f, -15.0f, -10.0f);
