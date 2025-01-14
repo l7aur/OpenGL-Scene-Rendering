@@ -3,7 +3,7 @@
 DirectionalLight::DirectionalLight()
 	: Light()
 {
-	lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 100.0f);
+	lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 20.0f);
 }
 
 DirectionalLight::DirectionalLight(
@@ -15,7 +15,7 @@ DirectionalLight::DirectionalLight(
 	Light(shadowWidth, shadowHeight, red, green, blue, ambientI, diffuseI), 
 	direction(glm::vec3{ dirX, dirY, dirZ })
 {
-	lightProjection = glm::ortho(-20.0f, 20.0f, -20.0f, 20.0f, 0.1f, 100.0f);
+	lightProjection = glm::ortho(-18.0f, 18.0f, -18.0f, 18.0f, 0.1f, 40.0f);
 }
 
 void DirectionalLight::useLight(

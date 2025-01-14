@@ -228,7 +228,7 @@ int main() {
 	mainLight = DirectionalLight(
 		2048, 2048,
 		1.0f, 1.0f, 1.0f,
-		0.001f, 0.1f,
+		0.5f, 0.1f,
 		0.0f, -15.0f, -10.0f);
 	pointLights[pointLightCount++] = PointLight(
 		1024, 1024,
@@ -263,6 +263,7 @@ int main() {
 		1.0f, 0.0f, 0.0f,
 		20.0f);
 	pointLightCount = 0;
+	spotLightCount = 0;
 
 	skybox = (SKY_BOX_TYPE == 0) ?
 		SkyBox({
@@ -287,6 +288,7 @@ int main() {
 	
 
 	glm::mat4 projection = glm::perspective(glm::radians(60.0f), (GLfloat)mainWindow.getBufferWidth() / (GLfloat)mainWindow.getBufferHeight(), 0.1f, 100.0f);
+	int doShadows = 0;
 
 	while (!mainWindow.shouldClose()) {
 		computeDeltaTime();
@@ -300,14 +302,18 @@ int main() {
 			spotLights[0].toggle();
 			mainWindow.unsetKey(GLFW_KEY_L);
 		}
-
-		directionalShadowMapPass(&mainLight);
-		for (size_t i = 0; i < pointLightCount; i++)
-			omnidirectionalShadowMapPass(&pointLights[i]);
-		for (size_t i = 0; i < spotLightCount; i++)
-			omnidirectionalShadowMapPass(&spotLights[i]);
-		renderPass(projection, camera.computeViewMatrix());
-
+		//if (doShadows == 0) {
+			directionalShadowMapPass(&mainLight);
+		//}
+		//else if(doShadows == 1){
+			for (size_t i = 0; i < pointLightCount; i++)
+				omnidirectionalShadowMapPass(&pointLights[i]);
+			for (size_t i = 0; i < spotLightCount; i++)
+				omnidirectionalShadowMapPass(&spotLights[i]);
+		//}
+		//else
+			renderPass(projection, camera.computeViewMatrix());
+		doShadows = (doShadows + 1) % 3;
 		mainWindow.swapBuffers();
 	}
 	cleanup();
@@ -319,7 +325,8 @@ static void renderFloor() {
 	model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	dirtTex.useTexture();
+	plainTex.useTexture();
+	//dirtTex.useTexture();
 	dull.useMaterial(uniformSpecularI, uniformShininess);
 	sceneFloor->renderMesh();
 }
@@ -327,7 +334,7 @@ static void renderFloor() {
 void renderWatchTower()
 {
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(18.0f, WATCHTOWER_Y_TRANSLATION, 18.0f));
+	model = glm::translate(model, glm::vec3(12.0f, WATCHTOWER_Y_TRANSLATION, 11.0f));
 	model = glm::scale(model, glm::vec3(WATCHTOWER_SCALE_FACTOR));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	dull.useMaterial(uniformSpecularI, uniformShininess);
@@ -530,7 +537,7 @@ void createGeese()
 	geese.push_back({
 		goose,
 		new glm::vec3{0.3f, GOOSE_Y_TRANSLATION, 1.0f},
-		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{},
 		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
 	geese.push_back({
 		goose,
