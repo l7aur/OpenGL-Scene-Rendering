@@ -81,7 +81,7 @@ void Model::loadMaterials(const aiScene* scene)
 				std::string fileName = std::string(loc.data).substr(idx + 1);
 				std::string texturePath = std::string("models/textures/") + fileName;
 				textureList[i] = new Texture(texturePath.c_str());
-				if (!textureList[i]->loadTexture()) {
+				if (!textureList[i]->loadTextureA()) {
 					printf("Failed to load texture at %s\n", texturePath.c_str());
 					delete textureList[i];
 					textureList[i] = nullptr;

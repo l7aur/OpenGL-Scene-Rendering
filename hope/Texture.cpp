@@ -35,7 +35,7 @@ bool Texture::loadTexture()
 
 bool Texture::loadTextureA()
 {
-	unsigned char* texData = stbi_load(path, &width, &height, &bitDepth, 0);
+	unsigned char* texData = stbi_load(path, &width, &height, &bitDepth, 4);
 	if (!texData) {
 		printf("Failed to find %s!\n", path);
 		return false;

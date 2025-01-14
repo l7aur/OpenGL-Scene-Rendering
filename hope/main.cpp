@@ -6,6 +6,8 @@
 #include <cmath>
 #include <vector>
 #include <tuple>
+#include <cstdlib>
+#include <ctime>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -48,37 +50,47 @@ unsigned int spotLightCount = 0;
 
 Mesh* sceneFloor{ nullptr };
 std::vector<Mesh*> meshList;
+Model* tree1{ nullptr }, * jeep{ nullptr }, * deer{ nullptr }, * watchTower{ nullptr }, * goose{ nullptr }, * tiger{ nullptr }, * starWars{ nullptr }, * heli{ nullptr }; //references for cleanup
 std::vector<std::tuple<Model*, glm::vec3*, glm::vec3*, glm::vec3*>> trees; //model, translation, scale, rotation
+std::vector<std::tuple<Model*, glm::vec3*, glm::vec3*, glm::vec3*>> deerS; //model, translation, scale, rotation
+std::vector<std::tuple<Model*, glm::vec3*, glm::vec3*, glm::vec3*>> geese; //model, translation, scale, rotation
 
 Material shiny, dull;
 Texture brickTex, dirtTex, plainTex;
-Model xWing, blackHawk, quad;
 
 static void createTrees();
+static void createDeerS();
+static void createGeese();
+static void createWatchTower();
+static void createSceneFloor();
+static void createTiger();
+static void createJeep();
+static void createStarWars();
+static void createHeli();
 
-static void renderTrees();
+static void renderModels(std::vector<std::tuple<Model*, glm::vec3*, glm::vec3*, glm::vec3*>> modelList, Material material);
 static void renderFloor();
+static void renderWatchTower();
+static void renderTiger();
+static void renderJeep();
+static void renderStarWars();
+static void renderHeli();
 
 static void computeDeltaTime();
 static void cleanup();
+static float randomFloat();
 
-static void createObjects() {
-	GLfloat floorVertices[] = {
-		-10.0f, 0.0f, -10.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-		10.0f, 0.0f, -10.0f, 10.0f, 0.0f, 0.0f, -1.0f, 0.0f,
-		-10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f, -1.0f, 0.0f,
-		10.0f, 0.0f, 10.0f, 10.0f, 10.0f, 0.0f, -1.0f, 0.0f
-	};
-
-	unsigned int floorIndices[] = {
-		0, 2, 1,
-		1, 2, 3
-	};
-
-	sceneFloor = new Mesh();
-	sceneFloor->createMesh(floorVertices, floorIndices, 32, 6);
-	
+static void createObjects()
+{	
+	createSceneFloor();
 	createTrees();
+	createDeerS();
+	createGeese();
+	createWatchTower();
+	createTiger();
+	createJeep();
+	createStarWars();
+	createHeli();
 }
 
 static void createShaders() {
@@ -91,36 +103,23 @@ static void createShaders() {
 	omniShadowShader.createFromFiles("shaders/omnishadowMap.vert", "shaders/omnishadowMap.geom", "shaders/omnishadowMap.frag");
 }
 
-float blackhawkAngle = 0.0f;
+float heliAngle = 0.0f;
 
 static void renderScene() {
 	// floor
 	renderFloor();
+	renderModels(trees, shiny);
+	renderModels(deerS, dull);
+	renderModels(geese, dull);
+	renderWatchTower();
+	renderTiger();
+	renderJeep();
+	//renderStarWars();
+	//renderHeli();
 
-	renderTrees();
+	/*
 
-	/*glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-7.0f, 0.0f, 10.0f));
-	model = glm::scale(model, glm::vec3(0.006f, 0.006f, 0.006f));
-	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	shiny.useMaterial(uniformSpecularI, uniformShininess);
-	xWing.renderModel();
-
-	blackhawkAngle += 0.1f;
-	if (blackhawkAngle > 360.0f)
-	{
-		blackhawkAngle = 0.1f;
-	}
-
-	model = glm::mat4(1.0f);
-	model = glm::rotate(model, glm::radians(-blackhawkAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::translate(model, glm::vec3(-8.0f, 2.0f, 0.0f));
-	model = glm::rotate(model, glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
-	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	shiny.useMaterial(uniformSpecularI, uniformShininess);
-	blackHawk.renderModel();*/
+	*/
 }
 
 static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) 
@@ -156,9 +155,9 @@ static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix)
 	shaderList.at(0)->setTexture(1);
 	shaderList.at(0)->setDirectionalShadowMap(2);
 
-	glm::vec3 flashLightPosition = camera.getPosition();
-	flashLightPosition.y -= 0.1f;
-	spotLights[0].setFlash(flashLightPosition, camera.getDirection());
+	//glm::vec3 flashLightPosition = camera.getPosition();
+	//flashLightPosition.y -= 0.1f;
+	//spotLights[0].setFlash(flashLightPosition, camera.getDirection());
 
 	shaderList.at(0)->validate();
 
@@ -209,6 +208,7 @@ static void omnidirectionalShadowMapPass(PointLight* light) {
 }
 
 int main() {
+	srand(time(NULL));
 	mainWindow = Window(1366, 768);
 	if(mainWindow.initialise("GKS") < 0)
 		return -1;
@@ -220,15 +220,15 @@ int main() {
 
 	brickTex = Texture("models/textures/brick.png");
 	brickTex.loadTextureA();
-	dirtTex = Texture("models/textures/dirt.png");
-	dirtTex.loadTextureA();
+	dirtTex = Texture("models/textures/dirt.jpg");
+	dirtTex.loadTexture();
 	plainTex = Texture("models/textures/plain.png");
 	plainTex.loadTextureA();
 
 	mainLight = DirectionalLight(
 		2048, 2048,
 		1.0f, 1.0f, 1.0f,
-		0.00f, 0.0f,
+		0.001f, 0.1f,
 		0.0f, -15.0f, -10.0f);
 	pointLights[pointLightCount++] = PointLight(
 		1024, 1024,
@@ -247,21 +247,22 @@ int main() {
 	spotLights[spotLightCount++] = SpotLight(
 		1024, 1024,
 		0.1f, 100.0f,
-		1.0f, 1.0f, 1.0f,
-		0.0f, 2.0f,
-		0.0f, 0.0f, 0.0f,
-		0.0f, -1.0f, 0.0f,
-		1.0f, 0.0f, 0.0f,
+		0.8f, 1.0f, 1.0f,
+		0.8f, 2.0f,
+		15.0f, 1.0f, 16.565f,
+		-0.05f, -0.8f, -0.9f,
+		0.3f, 0.2f, 0.1f,
 		20.0f);
 	spotLights[spotLightCount++] = SpotLight(
 		1024, 1024,
 		0.1f, 100.0f,
-		1.0f, 1.0f, 1.0f,
-		0.0f, 1.0f,
-		0.0f, -1.5f, 0.0f,
-		-100.0f, -1.0f, 0.0f,
+		1.0f, 0.8f, 1.0f,
+		0.8f, 1.2f,
+		14.6f, 1.0f, 17.2f,
+		-0.3f, -0.8f, -0.9f,
 		1.0f, 0.0f, 0.0f,
 		20.0f);
+	pointLightCount = 0;
 
 	skybox = (SKY_BOX_TYPE == 0) ?
 		SkyBox({
@@ -283,10 +284,7 @@ int main() {
 	shiny = Material(1.0f, 32.0f);
 	dull = Material(0.3f, 4.0f);
 
-	xWing = Model();
-	xWing.loadModel("models/x-wing/x-wing.obj");
-	blackHawk = Model();
-	blackHawk.loadModel("models/uh60/uh60.obj");
+	
 
 	glm::mat4 projection = glm::perspective(glm::radians(60.0f), (GLfloat)mainWindow.getBufferWidth() / (GLfloat)mainWindow.getBufferHeight(), 0.1f, 100.0f);
 
@@ -322,71 +320,298 @@ static void renderFloor() {
 	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	dirtTex.useTexture();
-	shiny.useMaterial(uniformSpecularI, uniformShininess);
+	dull.useMaterial(uniformSpecularI, uniformShininess);
 	sceneFloor->renderMesh();
 }
 
-static void renderTrees()
+void renderWatchTower()
 {
-	for (auto& i : trees) {
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(18.0f, WATCHTOWER_Y_TRANSLATION, 18.0f));
+	model = glm::scale(model, glm::vec3(WATCHTOWER_SCALE_FACTOR));
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+	dull.useMaterial(uniformSpecularI, uniformShininess);
+	watchTower->renderModel();
+}
+
+void renderTiger()
+{
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(13.0f, TIGER_Y_TRANSLATION, -14.0f));
+	model = glm::scale(model, glm::vec3(TIGER_SCALE_FACTOR));
+	model = glm::rotate(model, glm::radians(2.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+	dull.useMaterial(uniformSpecularI, uniformShininess);
+	tiger->renderModel();
+}
+
+void renderJeep()
+{
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(15.0f, -1.55f, 16.0f));
+	model = glm::scale(model, glm::vec3(1.0f));
+	model = glm::rotate(model, glm::radians(200.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+	dull.useMaterial(uniformSpecularI, uniformShininess);
+	jeep->renderModel();
+}
+
+void renderStarWars()
+{
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(-7.0f, 0.0f, 10.0f));
+	model = glm::scale(model, glm::vec3(0.006f, 0.006f, 0.006f));
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+	shiny.useMaterial(uniformSpecularI, uniformShininess);
+	starWars->renderModel();
+}
+
+void renderHeli()
+{
+	heliAngle += 0.1f;
+	if (heliAngle > 360.0f)
+	{
+		heliAngle = 0.1f;
+	}
+
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::rotate(model, glm::radians(-heliAngle), glm::vec3(0.0f, 1.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(-8.0f, 2.0f, 0.0f));
+	model = glm::rotate(model, glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+	shiny.useMaterial(uniformSpecularI, uniformShininess);
+	heli->renderModel();
+}
+
+static void renderModels(std::vector<std::tuple<Model*, glm::vec3*, glm::vec3*, glm::vec3*>> modelList, Material material)
+{
+	for (auto& i : modelList) {
 		glm::mat4 model = glm::mat4(1.0f);
 		model = glm::translate(model, *std::get<1>(i));
-		model = glm::scale(model, *std::get<2>(i));
+		model = glm::scale(model, (*std::get<2>(i)));
 		model = glm::rotate(model, (*std::get<3>(i)).x, glm::vec3{ 1.0f, 0.0f, 0.0f });
 		model = glm::rotate(model, (*std::get<3>(i)).y, glm::vec3{ 0.0f, 1.0f, 0.0f });
 		model = glm::rotate(model, (*std::get<3>(i)).z, glm::vec3{ 0.0f, 0.0f, 1.0f });
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		shiny.useMaterial(uniformSpecularI, uniformShininess);
+		dirtTex.useTexture();
+		material.useMaterial(uniformSpecularI, uniformShininess);
 		std::get<0>(i)->renderModel();
 	}
 }
 
 static void createTrees() 
 {
-	Model* tree = new Model();
-	tree->loadModel("models/tree/Lowpoly_tree_sample.obj");
+	tree1 = new Model();
+	tree1->loadModel("models/tree1/trunk wood.obj");
 
+	//tree2 = new Model();
+	//tree2->loadModel("models/tree2/bush.obj");
+
+	float randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{5.0f, LOW_POLY_Y_TRANSLATION, -2.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR },
 		new glm::vec3{0.0f, 1.45f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{2.0f, LOW_POLY_Y_TRANSLATION, -10.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
 		new glm::vec3{0.0f, -1.23f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{10.0f, LOW_POLY_Y_TRANSLATION, -12.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
 		new glm::vec3{0.0f, 3.78f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{-13.0f, LOW_POLY_Y_TRANSLATION, 5.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
-		new glm::vec3{0.0f, -0.98f, 0.0f} });
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
+		new glm::vec3{0.0f, -5.98f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{-3.0f, LOW_POLY_Y_TRANSLATION, 9.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
-		new glm::vec3{0.0f, 0.45f, 0.0f} });
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
+		new glm::vec3{0.0f, 5.45f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{-5.0f, LOW_POLY_Y_TRANSLATION, -6.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
 		new glm::vec3{0.0f, -2.34f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{15.0f, LOW_POLY_Y_TRANSLATION, 4.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
-		new glm::vec3{0.0f, 1.23f, 0.0f} });
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
+		new glm::vec3{0.0f, 6.23f, 0.0f} });
+
+	randomScaleF = randomFloat();
 	trees.push_back({
-		tree,
+		tree1,
 		new glm::vec3{5.0f, LOW_POLY_Y_TRANSLATION, 13.0f},
-		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE1_SCALE_FACTOR},
 		new glm::vec3{0.0f, 2.34f, 0.0f} });
 
+	/*randomScaleF = randomFloat();
+	trees.push_back({
+		tree2,
+		new glm::vec3{19.0f, LOW_POLY_Y_TRANSLATION, -8.0f},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE2_SCALE_FACTOR},
+		new glm::vec3{0.0f, 1.34f, 0.0f} });
+
+	randomScaleF = randomFloat();
+	trees.push_back({
+		tree2,
+		new glm::vec3{7.4f, LOW_POLY_Y_TRANSLATION, -3.5f},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE2_SCALE_FACTOR},
+		new glm::vec3{0.0f, -1.78f, 0.0f} });
+
+	randomScaleF = randomFloat();
+	trees.push_back({
+		tree2,
+		new glm::vec3{-15.0f, LOW_POLY_Y_TRANSLATION, -7.0f},
+		new glm::vec3{ randomScaleF * LOW_POLY_TREE2_SCALE_FACTOR},
+		new glm::vec3{0.0f, 0.21f, 0.0f} });*/
+
+}
+static void createDeerS() 
+{
+	deer = new Model();
+	deer->loadModel("models/deer/79377.obj");
+
+	deerS.push_back({
+		deer,
+		new glm::vec3{-10.0f, DEER_Y_TRANSLATION, -5.0f},
+		new glm::vec3{DEER_SCALE_FACTOR},
+		new glm::vec3{glm::radians(-90.0f), 0.0f, 0.0f}});
+
+	deerS.push_back({
+		deer,
+		new glm::vec3{-9.0f, DEER_Y_TRANSLATION, -7.0f},
+		new glm::vec3{DEER_SCALE_FACTOR},
+		new glm::vec3{glm::radians(-90.0f), 0.0f, 0.0f} });
+
+	deerS.push_back({
+		deer,
+		new glm::vec3{-11.0f, DEER_Y_TRANSLATION, -3.1f},
+		new glm::vec3{DEER_SCALE_FACTOR},
+		new glm::vec3{glm::radians(-90.0f), 0.0f, 0.0f} });
+
+	deerS.push_back({
+		deer,
+		new glm::vec3{-10.3f, DEER_Y_TRANSLATION, -6.2f},
+		new glm::vec3{DEER_SCALE_FACTOR},
+		new glm::vec3{glm::radians(-90.0f), 0.0f, 0.0f} });
+
+	deerS.push_back({
+		deer,
+		new glm::vec3{-8.4f, DEER_Y_TRANSLATION, -6.3f},
+		new glm::vec3{DEER_SCALE_FACTOR},
+		new glm::vec3{glm::radians(-90.0f), 0.0f, 0.0f} });
+}
+void createGeese()
+{
+	goose = new Model();
+	goose->loadModel("models/goose/goose.obj");
+
+	geese.push_back({
+		goose,
+		new glm::vec3{0.3f, GOOSE_Y_TRANSLATION, 1.0f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{0.6f, GOOSE_Y_TRANSLATION, 2.3f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{0.8f, GOOSE_Y_TRANSLATION, -1.5f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{0.2f, GOOSE_Y_TRANSLATION, -0.4f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{-0.6f, GOOSE_Y_TRANSLATION, 0.6f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{-1.0f, GOOSE_Y_TRANSLATION, 1.4f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{-2.0f, GOOSE_Y_TRANSLATION, 1.9f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+	geese.push_back({
+		goose,
+		new glm::vec3{1.0f, GOOSE_Y_TRANSLATION, 2.1f},
+		new glm::vec3{GOOSE_SCALE_FACTOR},
+		new glm::vec3{glm::radians(0.0f), glm::radians(randomFloat() * 100.0f), 0.0f} });
+}
+void createWatchTower()
+{
+	watchTower = new Model();
+	watchTower->loadModel("models/watchtower/wooden_watch_tower2.obj");
+
+}
+void createSceneFloor()
+{
+	GLfloat floorVertices[] = {
+		-10.0f, 0.0f, -10.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+		10.0f, 0.0f, -10.0f, 10.0f, 0.0f, 0.0f, -1.0f, 0.0f,
+		-10.0f, 0.0f, 10.0f, 0.0f, 10.0f, 0.0f, -1.0f, 0.0f,
+		10.0f, 0.0f, 10.0f, 10.0f, 10.0f, 0.0f, -1.0f, 0.0f
+	};
+
+	unsigned int floorIndices[] = {
+		0, 2, 1,
+		1, 2, 3
+	};
+
+	sceneFloor = new Mesh();
+	sceneFloor->createMesh(floorVertices, floorIndices, 32, 6);
+}
+void createTiger()
+{
+	tiger = new Model();
+	tiger->loadModel("models/tiger/B0715165.obj");
+}
+void createJeep()
+{
+	jeep = new Model();
+	jeep->loadModel("models/jeep/78765.obj");
+}
+
+void createStarWars()
+{
+	starWars = new Model();
+	starWars->loadModel("models/x-wing/x-wing.obj");
+}
+
+void createHeli()
+{
+	heli = new Model();
+	heli->loadModel("models/uh60/uh60.obj");
 }
 
 static void computeDeltaTime() 
@@ -403,12 +628,45 @@ static void cleanup()
 	for (auto& i : shaderList)
 		delete i;
 	//remove the resource that all trees point to
-	if(trees.size() > 0) 
-		delete std::get<0>(trees.at(0));
 	for (auto& i : trees) {
 		delete std::get<1>(i);
 		delete std::get<2>(i);
 		delete std::get<3>(i);
 	}
-	delete sceneFloor;
+	for (auto& i : deerS) {
+		delete std::get<1>(i);
+		delete std::get<2>(i);
+		delete std::get<3>(i);
+	}
+	for (auto& i : geese) {
+		delete std::get<1>(i);
+		delete std::get<2>(i);
+		delete std::get<3>(i);
+	}
+	if(sceneFloor)
+		delete sceneFloor;
+	if (tree1)
+		delete tree1;
+	if (jeep)
+		delete jeep;
+	if (deer)
+		delete deer;
+	if (watchTower)
+		delete watchTower;
+	if (goose)
+		delete goose;
+	if (tiger)
+		delete tiger;
+	if (starWars)
+		delete starWars;
+}
+
+static float randomFloat()
+{
+	float aux = ((float)(rand() % 5 + 1) / (float)(rand() % 5 + 2));
+	return (aux > 3.5f) ? 
+		1.0f : 
+		(aux < 0.7f ) ? 
+		1.0f :
+		aux;
 }
