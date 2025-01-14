@@ -310,14 +310,12 @@ int main() {
 		else {
 			if (reachedKnown && reachedYawed) {
 				float y = camera.getYaw();
-				camera.setYaw(y + 0.08f);
+				camera.setYaw(y + 0.067f);
 				glm::vec3 v = camera.getPosition();
-				v += glm::vec3{ dirX * tx, 0.0f, tx * dirZ };
-				printf("%f %f %f\n", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
-				if (v.z >= 15.1f || v.z <= -15.1f)
-					dirZ *= (-1.0f);
+				v += glm::vec3{ dirX * tx, 0.0f, 0.0f };
+				v.z = glm::sqrt(230.0f - v.x * v.x) * (-dirZ);
 				if (v.x >= 15.1f || v.x <= -15.1f)
-					dirX *= (-1.0f);
+					dirX *= (-1.0f), dirZ *= (-1.0f);
 				camera.setPosition(v);
 				camera.update();
 			}
@@ -332,6 +330,7 @@ int main() {
 			if (reachedKnown && !reachedYawed) {
 				float y = camera.getYaw();
 				camera.setYaw(y + 0.1f);
+				camera.update();
 			}
 			if (camera.getYaw() >= glm::radians(90.0f))
 				reachedYawed = true;
