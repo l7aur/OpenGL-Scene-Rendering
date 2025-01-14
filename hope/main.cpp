@@ -114,12 +114,8 @@ static void renderScene() {
 	renderWatchTower();
 	renderTiger();
 	renderJeep();
-	//renderStarWars();
-	//renderHeli();
-
-	/*
-
-	*/
+	renderStarWars();
+	renderHeli();
 }
 
 static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) 
@@ -334,7 +330,7 @@ static void renderFloor() {
 void renderWatchTower()
 {
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(12.0f, WATCHTOWER_Y_TRANSLATION, 11.0f));
+	model = glm::translate(model, glm::vec3(6.0f, WATCHTOWER_Y_TRANSLATION, 5.0f));
 	model = glm::scale(model, glm::vec3(WATCHTOWER_SCALE_FACTOR));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	dull.useMaterial(uniformSpecularI, uniformShininess);
@@ -363,11 +359,23 @@ void renderJeep()
 	jeep->renderModel();
 }
 
+float starWarsX = -20.0f;
+float acc = 0.0f;
+float x = -0.003f;
+
 void renderStarWars()
 {
+	acc = powf(x, 2) * 5000;
+	starWarsX += 0.01f + acc;
+	x += 0.00001f;
+	if (starWarsX > 20.0f) {
+		starWarsX = -20.0f;
+		x = -0.003f;
+	}
 	glm::mat4 model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(-7.0f, 0.0f, 10.0f));
+	model = glm::translate(model, glm::vec3(-starWarsX - 8.0f, 0.0f, starWarsX));
 	model = glm::scale(model, glm::vec3(0.006f, 0.006f, 0.006f));
+	model = glm::rotate(model, glm::radians(-45.0f), glm::vec3{ 0.0f, 1.0f, 0.0f });
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	shiny.useMaterial(uniformSpecularI, uniformShininess);
 	starWars->renderModel();
@@ -382,8 +390,9 @@ void renderHeli()
 	}
 
 	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3{ 5.5f, 0.0f, 5.5f });
 	model = glm::rotate(model, glm::radians(-heliAngle), glm::vec3(0.0f, 1.0f, 0.0f));
-	model = glm::translate(model, glm::vec3(-8.0f, 2.0f, 0.0f));
+	model = glm::translate(model, glm::vec3(-4.0f, 5.0f, 0.0f));
 	model = glm::rotate(model, glm::radians(-20.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 	model = glm::rotate(model, glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
