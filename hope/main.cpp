@@ -5,6 +5,7 @@
 #include <string.h>
 #include <cmath>
 #include <vector>
+#include <tuple>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -30,7 +31,6 @@ Camera camera;
 DirectionalLight mainLight;
 PointLight pointLights[MAX_POINT_LIGHTS];
 SpotLight spotLights[MAX_SPOT_LIGHTS];
-std::vector<Mesh*> meshList;
 std::vector<Shader*> shaderList;
 Shader directionalShadowShader;
 Shader omniShadowShader;
@@ -46,53 +46,23 @@ GLfloat lastTime{ 0.0f };
 unsigned int pointLightCount = 0;
 unsigned int spotLightCount = 0;
 
+Mesh* sceneFloor{ nullptr };
+std::vector<Mesh*> meshList;
+std::vector<std::tuple<Model*, glm::vec3*, glm::vec3*, glm::vec3*>> trees; //model, translation, scale, rotation
+
 Material shiny, dull;
 Texture brickTex, dirtTex, plainTex;
 Model xWing, blackHawk, quad;
 
-static void computeDeltaTime() {
-	GLfloat currTime = (GLfloat)glfwGetTime();
-	deltaTime = currTime - lastTime;
-	lastTime = currTime;
-}
+static void createTrees();
 
-static void calcAvgNormals(unsigned int* indices, unsigned int indiceCount, GLfloat* vertices, unsigned int verticeCount, 
-	unsigned int vLength, unsigned int normalOffset) {
-	for (size_t i = 0; i < indiceCount; i += 3) {
-		unsigned int in0 = indices[i] * vLength;
-		unsigned int in1 = indices[i + 1] * vLength;
-		unsigned int in2 = indices[i + 2] * vLength;
-		glm::vec3 v1(vertices[in1] - vertices[in0], vertices[in1 + 1] - vertices[in0 + 1], vertices[in1 + 2] - vertices[in0 + 2]);
-		glm::vec3 v2(vertices[in2] - vertices[in0], vertices[in2 + 1] - vertices[in0 + 1], vertices[in2 + 2] - vertices[in0 + 2]);
-		glm::vec3 normal = glm::cross(v1, v2);
-		normal = glm::normalize(normal);
-		in0 += normalOffset;in1 += normalOffset;in2 += normalOffset;
-		vertices[in0] += normal.x; vertices[in0 + 1] += normal.y; vertices[in0 + 2] += normal.z;
-		vertices[in1] += normal.x; vertices[in1 + 1] += normal.y; vertices[in1 + 2] += normal.z;
-		vertices[in2] += normal.x; vertices[in2 + 1] += normal.y; vertices[in2 + 2] += normal.z;
-	}
-	for (size_t i = 0; i < verticeCount / vLength; i++) {
-		unsigned int nOffset = i * vLength + normalOffset;
-		glm::vec3 vec(vertices[nOffset], vertices[nOffset + 1], vertices[nOffset + 2]);
-		vec = glm::normalize(vec);
-		vertices[nOffset] = vec.x; vertices[nOffset + 1] = vec.y; vertices[nOffset + 2] = vec.z;
-	}
-}
+static void renderTrees();
+static void renderFloor();
+
+static void computeDeltaTime();
+static void cleanup();
 
 static void createObjects() {
-	GLfloat vertices[] = {
-		-1.0f, -1.0f, -0.6f,		0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, -1.0f, 1.0f,		0.5f, 0.0f, 0.0f, 0.0f, 0.0f,
-		1.0f, -1.0f, -0.6f,		1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-		0.0f, 1.0f, 0.0f,		0.5f, 1.0f, 0.0f, 0.0f, 0.0f
-	};
-	unsigned int indices[] = {
-		0, 3, 1,
-		1, 3, 2,
-		2, 3, 0,
-		0, 1, 2
-	};
-
 	GLfloat floorVertices[] = {
 		-10.0f, 0.0f, -10.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f,
 		10.0f, 0.0f, -10.0f, 10.0f, 0.0f, 0.0f, -1.0f, 0.0f,
@@ -105,27 +75,10 @@ static void createObjects() {
 		1, 2, 3
 	};
 
-	GLfloat quadVertices[] = {
-		-5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		-5.0f, 0.0f, -5.0f, 1.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-		-5.0f, 5.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f,
-		-5.0f, 5.0f, -5.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f
-	};
-	unsigned int quadIndices[] = {
-		0, 1, 2,
-		1, 2, 3
-	};
-
-	calcAvgNormals(indices, 12, vertices, 32, 8, 5);
-	Mesh* obj1 = new Mesh();
-	obj1->createMesh(vertices, indices, 32, 12);
-	meshList.push_back(obj1);
-	Mesh* obj2 = new Mesh();
-	obj2->createMesh(vertices, indices, 32, 12);
-	meshList.push_back(obj2);
-	Mesh* obj3 = new Mesh();
-	obj3->createMesh(floorVertices, floorIndices, 32, 6);
-	meshList.push_back(obj3);
+	sceneFloor = new Mesh();
+	sceneFloor->createMesh(floorVertices, floorIndices, 32, 6);
+	
+	createTrees();
 }
 
 static void createShaders() {
@@ -138,39 +91,15 @@ static void createShaders() {
 	omniShadowShader.createFromFiles("shaders/omnishadowMap.vert", "shaders/omnishadowMap.geom", "shaders/omnishadowMap.frag");
 }
 
-static void cleanup() {
-	for (auto& i : meshList)
-		delete i;
-	for (auto& i : shaderList)
-		delete i;
-}
-
 float blackhawkAngle = 0.0f;
 
 static void renderScene() {
-	glm::mat4 model(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 0.0f, -2.5f));
-	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	brickTex.useTexture();
-	shiny.useMaterial(uniformSpecularI, uniformShininess);
-	meshList.at(0)->renderMesh();
+	// floor
+	renderFloor();
 
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, 4.0f, -2.5f));
-	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	dirtTex.useTexture();
-	dull.useMaterial(uniformSpecularI, uniformShininess);
-	meshList.at(1)->renderMesh();
+	renderTrees();
 
-	model = glm::mat4(1.0f);
-	model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
-	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
-	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-	dirtTex.useTexture();
-	shiny.useMaterial(uniformSpecularI, uniformShininess);
-	meshList.at(2)->renderMesh();
-
-	model = glm::mat4(1.0f);
+	/*glm::mat4 model = glm::mat4(1.0f);
 	model = glm::translate(model, glm::vec3(-7.0f, 0.0f, 10.0f));
 	model = glm::scale(model, glm::vec3(0.006f, 0.006f, 0.006f));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
@@ -191,7 +120,7 @@ static void renderScene() {
 	model = glm::scale(model, glm::vec3(0.4f, 0.4f, 0.4f));
 	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
 	shiny.useMaterial(uniformSpecularI, uniformShininess);
-	blackHawk.renderModel();
+	blackHawk.renderModel();*/
 }
 
 static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) 
@@ -385,4 +314,101 @@ int main() {
 	}
 	cleanup();
 	return 0;
+}
+
+static void renderFloor() {
+	glm::mat4 model = glm::mat4(1.0f);
+	model = glm::translate(model, glm::vec3(0.0f, -2.0f, 0.0f));
+	model = glm::scale(model, glm::vec3(2.0f, 2.0f, 2.0f));
+	glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+	dirtTex.useTexture();
+	shiny.useMaterial(uniformSpecularI, uniformShininess);
+	sceneFloor->renderMesh();
+}
+
+static void renderTrees()
+{
+	for (auto& i : trees) {
+		glm::mat4 model = glm::mat4(1.0f);
+		model = glm::translate(model, *std::get<1>(i));
+		model = glm::scale(model, *std::get<2>(i));
+		model = glm::rotate(model, (*std::get<3>(i)).x, glm::vec3{ 1.0f, 0.0f, 0.0f });
+		model = glm::rotate(model, (*std::get<3>(i)).y, glm::vec3{ 0.0f, 1.0f, 0.0f });
+		model = glm::rotate(model, (*std::get<3>(i)).z, glm::vec3{ 0.0f, 0.0f, 1.0f });
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		shiny.useMaterial(uniformSpecularI, uniformShininess);
+		std::get<0>(i)->renderModel();
+	}
+}
+
+static void createTrees() 
+{
+	Model* tree = new Model();
+	tree->loadModel("models/tree/Lowpoly_tree_sample.obj");
+
+	trees.push_back({
+		tree,
+		new glm::vec3{5.0f, LOW_POLY_Y_TRANSLATION, -2.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, 1.45f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{2.0f, LOW_POLY_Y_TRANSLATION, -10.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, -1.23f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{10.0f, LOW_POLY_Y_TRANSLATION, -12.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, 3.78f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{-13.0f, LOW_POLY_Y_TRANSLATION, 5.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, -0.98f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{-3.0f, LOW_POLY_Y_TRANSLATION, 9.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, 0.45f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{-5.0f, LOW_POLY_Y_TRANSLATION, -6.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, -2.34f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{15.0f, LOW_POLY_Y_TRANSLATION, 4.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, 1.23f, 0.0f} });
+	trees.push_back({
+		tree,
+		new glm::vec3{5.0f, LOW_POLY_Y_TRANSLATION, 13.0f},
+		new glm::vec3{LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR, LOW_POLY_SCALE_FACTOR},
+		new glm::vec3{0.0f, 2.34f, 0.0f} });
+
+}
+
+static void computeDeltaTime() 
+{
+	GLfloat currTime = (GLfloat)glfwGetTime();
+	deltaTime = currTime - lastTime;
+	lastTime = currTime;
+}
+
+static void cleanup() 
+{
+	for (auto& i : meshList)
+		delete i;
+	for (auto& i : shaderList)
+		delete i;
+	//remove the resource that all trees point to
+	if(trees.size() > 0) 
+		delete std::get<0>(trees.at(0));
+	for (auto& i : trees) {
+		delete std::get<1>(i);
+		delete std::get<2>(i);
+		delete std::get<3>(i);
+	}
+	delete sceneFloor;
 }
