@@ -35,6 +35,7 @@ public:
 	GLuint getShininessLoc() const { return uniformShininess; };
 	GLuint getOmniLightPosLoc() const { return uniformOmniLightPos; };
 	GLuint getFarPlanePos() const { return uniformFarPlane; };
+	GLuint getShaderID() const { return shaderID; };
 
 	void setDirectionalLight(DirectionalLight* dLight);
 	void setPointLights(PointLight* lights, unsigned int lightCount, unsigned int textureUnit = 0, unsigned int offset = 0);

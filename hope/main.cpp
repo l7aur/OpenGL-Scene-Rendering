@@ -8,6 +8,8 @@
 #include <tuple>
 #include <cstdlib>
 #include <ctime>
+#include <windows.h>
+#include <mmsystem.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -151,9 +153,9 @@ static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix)
 	shaderList.at(0)->setTexture(1);
 	shaderList.at(0)->setDirectionalShadowMap(2);
 
-	//glm::vec3 flashLightPosition = camera.getPosition();
-	//flashLightPosition.y -= 0.1f;
-	//spotLights[0].setFlash(flashLightPosition, camera.getDirection());
+	glm::vec3 flashLightPosition = camera.getPosition();
+	flashLightPosition.y -= 0.1f;
+	spotLights[0].setFlash(flashLightPosition, camera.getDirection());
 
 	shaderList.at(0)->validate();
 
@@ -202,6 +204,26 @@ static void omnidirectionalShadowMapPass(PointLight* light) {
 	renderScene();
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+int idauysvfaid = 0;
+static void updateSkyBox() {
+	idauysvfaid = 1 - idauysvfaid;
+	skybox = (idauysvfaid == 0) ?
+		SkyBox({
+		"models/textures/skybox/posx.jpg",
+		"models/textures/skybox/negx.jpg",
+		"models/textures/skybox/posy.jpg",
+		"models/textures/skybox/negy.jpg",
+		"models/textures/skybox/posz.jpg",
+		"models/textures/skybox/negz.jpg" })
+		:
+		SkyBox({
+		"models/textures/skybox2/cupertin-lake_rt.tga",
+		"models/textures/skybox2/cupertin-lake_lf.tga",
+		"models/textures/skybox2/cupertin-lake_up.tga",
+		"models/textures/skybox2/cupertin-lake_dn.tga",
+		"models/textures/skybox2/cupertin-lake_bk.tga",
+		"models/textures/skybox2/cupertin-lake_ft.tga" });
+}
 
 int main() {
 	srand(time(NULL));
@@ -211,7 +233,6 @@ int main() {
 
 	createObjects();
 	createShaders();
-
 	camera = Camera(glm::vec3{ 0.0f, 0.0f, 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f }, -90.0f, 0.0f, 5.0f, 0.1f);
 
 	brickTex = Texture("models/textures/brick.png");
@@ -224,22 +245,31 @@ int main() {
 	mainLight = DirectionalLight(
 		2048, 2048,
 		1.0f, 1.0f, 1.0f,
-		0.5f, 0.1f,
+		0.01f, 0.1f,
 		0.0f, -15.0f, -10.0f);
 	pointLights[pointLightCount++] = PointLight(
 		1024, 1024,
 		0.1f, 100.0f,
-		0.0f, 0.0f, 1.0f,
-		0.0f, 0.4f,
-		1.0f, 2.0f, 0.0f,
+		1.0f, 0.0f, 0.0f,
+		0.5f, 0.4f,
+		6.0f, 2.0f, 5.0f,
 		0.3f, 0.01f, 0.01f);
 	pointLights[pointLightCount++] = PointLight(
 		1024, 1024,
 		0.1f, 100.0f,
 		0.0f, 1.0f, 0.0f,
-		0.0f, 0.4f,
-		-4.0f, 3.0f, 0.0f,
+		0.5f, 0.4f,
+		6.0f, 10.0f, 5.0f,
 		0.3f, 0.01f, 0.01f);
+	spotLights[spotLightCount++] = SpotLight(
+		1024, 1024,
+		0.1f, 100.0f,
+		0.8f, 1.0f, 1.0f,
+		0.8f, 2.0f,
+		15.0f, 1.0f, 16.565f,
+		-0.05f, -0.8f, -0.9f,
+		0.3f, 0.2f, 0.1f,
+		20.0f);
 	spotLights[spotLightCount++] = SpotLight(
 		1024, 1024,
 		0.1f, 100.0f,
@@ -258,25 +288,7 @@ int main() {
 		-0.3f, -0.8f, -0.9f,
 		1.0f, 0.0f, 0.0f,
 		20.0f);
-	pointLightCount = 0;
-	spotLightCount = 0;
-
-	skybox = (SKY_BOX_TYPE == 0) ?
-		SkyBox({
-		"models/textures/skybox/posx.jpg",
-		"models/textures/skybox/negx.jpg",
-		"models/textures/skybox/posy.jpg",
-		"models/textures/skybox/negy.jpg",
-		"models/textures/skybox/posz.jpg",
-		"models/textures/skybox/negz.jpg" })
-		:
-		SkyBox({
-		"models/textures/skybox2/cupertin-lake_rt.tga",
-		"models/textures/skybox2/cupertin-lake_lf.tga",
-		"models/textures/skybox2/cupertin-lake_up.tga",
-		"models/textures/skybox2/cupertin-lake_dn.tga",
-		"models/textures/skybox2/cupertin-lake_bk.tga",
-		"models/textures/skybox2/cupertin-lake_ft.tga" });
+	updateSkyBox();
 
 	shiny = Material(1.0f, 32.0f);
 	dull = Material(0.3f, 4.0f);
@@ -291,8 +303,24 @@ int main() {
 	float dirX = 1.0f;
 	float dirZ = 1.0f;
 	float tx = 0.01f;
+	int lightningC = 20;
+	bool isLightning{ false };
+	bool isSoundPlaying{ false };
 	while (!mainWindow.shouldClose()) {
 		computeDeltaTime();
+
+		if (isLightning) {
+			if(!isSoundPlaying)
+				PlaySound(TEXT("thunder.mp3"), NULL, SND_FILENAME | SND_ASYNC);
+			mainLight.lightning();
+			lightningC--;
+			if (lightningC == 0) {
+				lightningC = 20;
+				mainLight.nonLightning();
+				isLightning = false;
+				isSoundPlaying = false;
+			}
+		}
 
 		if (mainWindow.getKeys()[GLFW_KEY_L]) {
 			spotLights[0].toggle();
@@ -302,7 +330,37 @@ int main() {
 			tourStarted = !tourStarted;
 			mainWindow.unsetKey(GLFW_KEY_T);
 		}
-
+		if (mainWindow.getKeys()[GLFW_KEY_N]) {
+			updateSkyBox();
+			mainWindow.unsetKey(GLFW_KEY_N);
+		}
+		if (mainWindow.getKeys()[GLFW_KEY_DOWN]) {
+			mainLight.turnDownAmbientI();
+			mainWindow.unsetKey(GLFW_KEY_DOWN);
+		}
+		if (mainWindow.getKeys()[GLFW_KEY_UP]) {
+			mainLight.turnUpAmbientI();
+			mainWindow.unsetKey(GLFW_KEY_UP);
+		}
+		if (mainWindow.getKeys()[GLFW_KEY_1]) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			mainWindow.unsetKey(GLFW_KEY_1);
+		}
+		if (mainWindow.getKeys()[GLFW_KEY_2]) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+			mainWindow.unsetKey(GLFW_KEY_2);
+		}
+		if (mainWindow.getKeys()[GLFW_KEY_3]) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			mainWindow.unsetKey(GLFW_KEY_3);
+		}
+		if (mainWindow.getKeys()[GLFW_KEY_F]) {
+			isLightning = true;
+			isSoundPlaying = true;
+			mainWindow.unsetKey(GLFW_KEY_F);
+		}
+		
+		
 
 		glfwPollEvents();
 		if (!tourStarted)
@@ -339,16 +397,16 @@ int main() {
 		camera.keyControl(mainWindow.getKeys(), deltaTime);
 		camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());		
 
-		//if (doShadows == 0) {
+		if (doShadows == 0) {
 			directionalShadowMapPass(&mainLight);
-		//}
-		//else if(doShadows == 1){
-			for (size_t i = 0; i < pointLightCount; i++)
+		}
+		else if(doShadows == 1){
+			/*for (size_t i = 0; i < pointLightCount; i++)
 				omnidirectionalShadowMapPass(&pointLights[i]);
 			for (size_t i = 0; i < spotLightCount; i++)
-				omnidirectionalShadowMapPass(&spotLights[i]);
-		//}
-		//else
+				omnidirectionalShadowMapPass(&spotLights[i]);*/
+		}
+		else
 			renderPass(projection, camera.computeViewMatrix());
 		doShadows = (doShadows + 1) % 3;
 		mainWindow.swapBuffers();
