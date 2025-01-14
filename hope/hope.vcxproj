@@ -31,6 +31,7 @@
     <ClCompile Include="PointLight.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
+    <ClCompile Include="SkyBox.cpp" />
     <ClCompile Include="SpotLight.cpp" />
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="Window.cpp" />
@@ -46,6 +47,7 @@
     <ClInclude Include="PointLight.hpp" />
     <ClInclude Include="Shader.hpp" />
     <ClInclude Include="ShadowMap.hpp" />
+    <ClInclude Include="SkyBox.hpp" />
     <ClInclude Include="SpotLight.hpp" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Texture.hpp" />
@@ -59,6 +61,8 @@
     <None Include="shaders\omnishadowMap.frag" />
     <None Include="shaders\omnishadowMap.geom" />
     <None Include="shaders\omnishadowMap.vert" />
+    <None Include="shaders\skybox.frag" />
+    <None Include="shaders\skybox.vert" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "stb_image.h"
 #include <GL/glew.h>
+#include "CommonValues.hpp"
 
 class Texture {
 public:

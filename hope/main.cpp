@@ -23,6 +23,7 @@
 #include "SpotLight.hpp"
 #include "Material.hpp"
 #include "Model.hpp"
+#include "SkyBox.hpp"
 
 Window mainWindow;
 Camera camera;
@@ -33,6 +34,7 @@ std::vector<Mesh*> meshList;
 std::vector<Shader*> shaderList;
 Shader directionalShadowShader;
 Shader omniShadowShader;
+SkyBox skybox{};
 
 GLuint uniformProjection{ 0 }, uniformModel{ 0 }, uniformView{ 0 };
 GLuint uniformEyePosition{ 0 }, uniformShininess{ 0 }, uniformSpecularI{ 0 };
@@ -192,7 +194,15 @@ static void renderScene() {
 	blackHawk.renderModel();
 }
 
-static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) {
+static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) 
+{
+	glViewport(0, 0, 1366, 768);
+
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	skybox.draw(viewMatrix, projectionMatrix);
+
 	shaderList.at(0)->useShader();
 
 	uniformModel = shaderList.at(0)->getModelLoc();
@@ -201,11 +211,6 @@ static void renderPass(glm::mat4 projectionMatrix, glm::mat4 viewMatrix) {
 	uniformEyePosition = shaderList.at(0)->getEyePositionLoc();
 	uniformSpecularI = shaderList.at(0)->getSpecularILoc();
 	uniformShininess = shaderList.at(0)->getShininessLoc();
-
-	glViewport(0, 0, 1366, 768);
-
-	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glUniformMatrix4fv(uniformProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 	glUniformMatrix4fv(uniformView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
@@ -328,6 +333,24 @@ int main() {
 		-100.0f, -1.0f, 0.0f,
 		1.0f, 0.0f, 0.0f,
 		20.0f);
+
+	skybox = (SKY_BOX_TYPE == 0) ?
+		SkyBox({
+		"models/textures/skybox/posx.jpg",
+		"models/textures/skybox/negx.jpg",
+		"models/textures/skybox/posy.jpg",
+		"models/textures/skybox/negy.jpg",
+		"models/textures/skybox/posz.jpg",
+		"models/textures/skybox/negz.jpg" })
+		:
+		SkyBox({
+		"models/textures/skybox2/cupertin-lake_rt.tga",
+		"models/textures/skybox2/cupertin-lake_lf.tga",
+		"models/textures/skybox2/cupertin-lake_up.tga",
+		"models/textures/skybox2/cupertin-lake_dn.tga",
+		"models/textures/skybox2/cupertin-lake_bk.tga",
+		"models/textures/skybox2/cupertin-lake_ft.tga" });
+
 	shiny = Material(1.0f, 32.0f);
 	dull = Material(0.3f, 4.0f);
 
