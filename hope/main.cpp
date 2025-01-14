@@ -285,19 +285,61 @@ int main() {
 
 	glm::mat4 projection = glm::perspective(glm::radians(60.0f), (GLfloat)mainWindow.getBufferWidth() / (GLfloat)mainWindow.getBufferHeight(), 0.1f, 100.0f);
 	int doShadows = 0;
-
+	bool tourStarted{ false };
+	bool reachedKnown{ false };
+	bool reachedYawed{ false };
+	float dirX = 1.0f;
+	float dirZ = 1.0f;
+	float tx = 0.01f;
 	while (!mainWindow.shouldClose()) {
 		computeDeltaTime();
-
-		glfwPollEvents();
-
-		camera.keyControl(mainWindow.getKeys(), deltaTime);
-		camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());		
 
 		if (mainWindow.getKeys()[GLFW_KEY_L]) {
 			spotLights[0].toggle();
 			mainWindow.unsetKey(GLFW_KEY_L);
 		}
+		if (mainWindow.getKeys()[GLFW_KEY_T]) {
+			tourStarted = !tourStarted;
+			mainWindow.unsetKey(GLFW_KEY_T);
+		}
+
+
+		glfwPollEvents();
+		if (!tourStarted)
+				;
+		else {
+			if (reachedKnown && reachedYawed) {
+				float y = camera.getYaw();
+				camera.setYaw(y + 0.08f);
+				glm::vec3 v = camera.getPosition();
+				v += glm::vec3{ dirX * tx, 0.0f, tx * dirZ };
+				printf("%f %f %f\n", camera.getPosition().x, camera.getPosition().y, camera.getPosition().z);
+				if (v.z >= 15.1f || v.z <= -15.1f)
+					dirZ *= (-1.0f);
+				if (v.x >= 15.1f || v.x <= -15.1f)
+					dirX *= (-1.0f);
+				camera.setPosition(v);
+				camera.update();
+			}
+			if (!reachedKnown) {
+				glm::vec3 v = camera.getPosition();
+				v += glm::vec3{ 0.0f, 0.0f, -tx };
+				camera.setPosition(v);
+				camera.update();
+			}
+			if (camera.getPosition().z <= -15.0f)
+				reachedKnown = true;
+			if (reachedKnown && !reachedYawed) {
+				float y = camera.getYaw();
+				camera.setYaw(y + 0.1f);
+			}
+			if (camera.getYaw() >= glm::radians(90.0f))
+				reachedYawed = true;
+		}
+
+		camera.keyControl(mainWindow.getKeys(), deltaTime);
+		camera.mouseControl(mainWindow.getXChange(), mainWindow.getYChange());		
+
 		//if (doShadows == 0) {
 			directionalShadowMapPass(&mainLight);
 		//}

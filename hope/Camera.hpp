@@ -14,9 +14,13 @@ public:
 		GLfloat startMoveSpeed, GLfloat startTurnSpeed);
 	void keyControl(const bool* keys, GLfloat dTime);
 	void mouseControl(GLfloat xChange, GLfloat yChange);
+	void setPosition(glm::vec3 v) { position = v; };
+	void setYaw(float v) { yaw = v; };
 	glm::mat4 computeViewMatrix();
 	glm::vec3 getPosition() const { return position; };
 	glm::vec3 getDirection() const { return glm::normalize(front); };
+	float getYaw() const { return yaw; };
+	void update();
 	~Camera() {};
 private:
 	glm::vec3 position{ 0.0f, 0.0f, 0.0f };
@@ -28,5 +32,4 @@ private:
 	GLfloat yaw{ 0.0f }, pitch{ 0.0f };
 	GLfloat moveSpeed{ 5.0f }, turnSpeed{ 5.0f };
 
-	void update();
 };
